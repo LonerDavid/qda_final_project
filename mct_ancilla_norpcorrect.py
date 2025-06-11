@@ -50,13 +50,11 @@ def apply_recursive_mct_with_dirty(circuit, controls, target, dirty_ancilla):
 
 def main():
     # Configuration
-    num_controls = 5
+    num_controls = 7
     total_qubits = num_controls + 2  # target + dirty ancilla
     controls = list(range(num_controls))
     target = num_controls + 1
     dirty_ancilla = num_controls 
-
-
 
     # Initialize circuit with test input (set all controls to |1⟩)
     qc_test = QuantumCircuit(total_qubits)
@@ -83,7 +81,6 @@ def main():
     # Get the unitary matrix for the reference MCT circuit
     reference_unitary = Operator(qc_reference).data
 
-    
     # Print state results
     # print("Input state:")
     # print(input_state)
@@ -97,7 +94,7 @@ def main():
     print(qc_reference)
     print("Output Circuit:")
     print(qc_test)
-
+    
     # Set NumPy to print the full array
     np.set_printoptions(threshold=np.inf)
     # Print unitaries
@@ -115,8 +112,6 @@ def main():
     custom_unitary = Operator(qc_test).data
     ### test end ###
 
-
-
     # Check if the unitaries are equivalent (up to a global phase)
     # Normalize the unitaries to remove global phase differences
     custom_unitary_normalized = custom_unitary / np.linalg.norm(custom_unitary)
@@ -126,6 +121,19 @@ def main():
     unitary_fidelity = np.abs(np.trace(custom_unitary_normalized.conj().T @ reference_unitary_normalized)) / custom_unitary.shape[0]
     print("\n✅ States match?" , output_state.equiv(ref_state))
     print("\n✅ Unitaries match?" , abs(unitary_fidelity - 1.0) < 1e-10)
+    
+    print("\n✅ Unitaries match?(Allow relative phase)" )
+    abs_custom = np.abs(custom_unitary)
+    abs_reference = np.abs(reference_unitary)
+    abs_diff = np.abs(abs_custom - abs_reference)
+    tolerance = 1e-10
+    if np.all(abs_diff < tolerance):
+    	print("True")
+    else:
+    	print("\n❌ Entries differ in magnitude:")
+    	mismatch_indices = np.argwhere(abs_diff >= tolerance)
+    	for i, j in mismatch_indices:
+        	print(f"Mismatch at ({i},{j}): |custom|={abs_custom[i,j]:.4g}, |reference|={abs_reference[i,j]:.4g}")
 
 if __name__ == "__main__":
     main()
