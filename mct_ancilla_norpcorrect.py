@@ -47,10 +47,33 @@ def apply_recursive_mct_with_dirty(circuit, controls, target, dirty_ancilla):
         # recurse: treat target as dirty ancilla, use dirty_ancilla to compute intermediate
         apply_mct_with_dirty_ancilla(circuit, controls, target, dirty_ancilla)
 
-
+def generate_phase_table(custom_unitary, reference_unitary, num_controls, tol=1e-8):
+    phase_table = {}
+    num_qubits = int(np.log2(custom_unitary.shape[0]))
+    
+    
+    for i in range(custom_unitary.shape[0]):
+        for j in range(custom_unitary.shape[1]):
+            u_elem = custom_unitary[i, j]
+            r_elem = reference_unitary[i, j]
+ 
+            # 如果兩個都近似 0，就忽略
+            if np.abs(u_elem) < tol and np.abs(r_elem) < tol:
+                continue
+            # 如果 reference 為 0，但 custom 不為 0，就跳過（無法計 phase 差）
+            if np.abs(r_elem) < tol:
+                continue
+ 
+            phase = np.angle(u_elem / r_elem)
+            key = (format(i, f'0{num_qubits}b'), format(j, f'0{num_qubits}b'))
+            phase_table[key] = phase
+ 
+    return phase_table
+    
+    
 def main():
     # Configuration
-    num_controls = 7
+    num_controls = 5
     total_qubits = num_controls + 2  # target + dirty ancilla
     controls = list(range(num_controls))
     target = num_controls + 1
@@ -129,11 +152,16 @@ def main():
     tolerance = 1e-10
     if np.all(abs_diff < tolerance):
     	print("True")
+    	phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls)
+    	for bits, phase in phase_table.items():
+    		print(f"{bits}: phase = {phase:.4f} rad")
     else:
     	print("\n❌ Entries differ in magnitude:")
     	mismatch_indices = np.argwhere(abs_diff >= tolerance)
     	for i, j in mismatch_indices:
         	print(f"Mismatch at ({i},{j}): |custom|={abs_custom[i,j]:.4g}, |reference|={abs_reference[i,j]:.4g}")
+
+
 
 if __name__ == "__main__":
     main()

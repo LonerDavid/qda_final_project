@@ -35,6 +35,28 @@ def construction_1_mct(circuit, controls, target, ancilla_a, ancilla_b):
  
     # y ^= x1 & x2 & x3 & x4
 
+def generate_phase_table(custom_unitary, reference_unitary, num_controls=4, tol=1e-8):
+    phase_table = {}
+    num_qubits = int(np.log2(custom_unitary.shape[0]))
+    
+    
+    for i in range(custom_unitary.shape[0]):
+        for j in range(custom_unitary.shape[1]):
+            u_elem = custom_unitary[i, j]
+            r_elem = reference_unitary[i, j]
+ 
+            # 如果兩個都近似 0，就忽略
+            if np.abs(u_elem) < tol and np.abs(r_elem) < tol:
+                continue
+            # 如果 reference 為 0，但 custom 不為 0，就跳過（無法計 phase 差）
+            if np.abs(r_elem) < tol:
+                continue
+ 
+            phase = np.angle(u_elem / r_elem)
+            key = (format(i, f'0{num_qubits}b'), format(j, f'0{num_qubits}b'))
+            phase_table[key] = phase
+ 
+    return phase_table
  
 def main():
     # x1, x2, x3, x4, a, b, y
@@ -103,6 +125,9 @@ def main():
     	mismatch_indices = np.argwhere(abs_diff >= tolerance)
     	for i, j in mismatch_indices:
         	print(f"Mismatch at ({i},{j}): |custom|={abs_custom[i,j]:.4g}, |reference|={abs_reference[i,j]:.4g}")
+    phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls=4)
+    for bits, phase in phase_table.items():
+    	print(f"{bits}: phase = {phase:.4f} rad")
 
  
 if __name__ == "__main__":
