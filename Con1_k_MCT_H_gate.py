@@ -5,38 +5,53 @@ from qiskit.quantum_info import Statevector, Operator, state_fidelity
 from qiskit.circuit.library import MCXGate
 from qiskit_aer import Aer
 import numpy as np
- 
-def construction_1_mct(circuit, controls, target, ancilla_a, ancilla_b):
+from qiskit.quantum_info import Operator 
+    
+    
+def k_MCT_with_H_gate(k: int)-> QuantumCircuit:
     """
-    實作 Construction 1：4-control Toffoli gate 使用 2 個 dirty ancilla。
-    controls: x1, x2, x3, x4
-    ancilla_a: a
-    ancilla_b: b
-    target: y
+    Implements a C^kX (multi-control Toffoli) gate using Barenco's Lemma 7.2.
+    Requires (k-2) clean ancilla. Decomposes into 4(k-2) Toffoli gates.
+ 
+    Args:
+        k (int): Number of control qubits (k >= 3)
+ 
+    Returns:
+        QuantumCircuit: circuit with controls [0:k-1], ancilla [k:k+(k-2)], target at -1
     """
-    x1, x2, x3, x4 = controls
+    assert k >= 3, "Lemma 7.2 requires at least 3 control qubits"
+    
+    n_ancilla = k - 2
+    n_qubits = k + n_ancilla + 1  # controls + ancilla + target
+    qc = QuantumCircuit(n_qubits)
  
-    # a ^= x1 & x2
-    circuit.ccx(x4, ancilla_b, target)
+    controls = list(range(k))
+    ancilla = list(range(k, k + n_ancilla))
+    target = n_qubits - 1
     
-    circuit.ccx(x3, ancilla_a, ancilla_b)
     
-    circuit.ccx(x1, x2, ancilla_a)
-
-    circuit.ccx(x3, ancilla_a, ancilla_b)
-    
-    circuit.ccx(x4, ancilla_b, target)
-    
-    circuit.ccx(x3, ancilla_a, ancilla_b)
-    
-    circuit.ccx(x1, x2, ancilla_a)
-
-    circuit.ccx(x3, ancilla_a, ancilla_b)
+    qc.h(ancilla)
+    # Step 1: forward encoding
+    qc.ccx(controls[k-1], ancilla[n_ancilla-1], target)
+    for i in range(2, k-1):
+        qc.ccx(controls[k - i], ancilla[n_ancilla - i],n_qubits-i)
  
-    # y ^= x1 & x2 & x3 & x4
+    # Step 2: target operation
+    qc.ccx(controls[0], controls[1], ancilla[0])
+ 
+    # Step 3: backward decoding (inverse of Step 1)
+    
+    for i in reversed(range(2, k-1)):
+        qc.ccx(controls[k - i], ancilla[n_ancilla - i], n_qubits-i)
+            
+    qc.ccx(controls[k-1], ancilla[n_ancilla-1], target)
+    
+    for i in ancilla:
+    	qc.h(i)
+ 
+    return qc
 
-
-def generate_phase_table(custom_unitary, reference_unitary, num_controls, tol=1e-8):
+def generate_phase_table(custom_unitary, reference_unitary, num_controls=4, tol=1e-8):
     phase_table = {}
     num_qubits = int(np.log2(custom_unitary.shape[0]))
     
@@ -58,20 +73,23 @@ def generate_phase_table(custom_unitary, reference_unitary, num_controls, tol=1e
             phase_table[key] = phase
  
     return phase_table
- 
+
 def main():
-    # x1, x2, x3, x4, a, b, y
-    qc = QuantumCircuit(7)
-    controls = [0, 1, 2, 3]
-    ancilla_a = 4
-    ancilla_b = 5
-    target = 6
+    num_controls = 5
+    k = num_controls;
+    total_qubits = num_controls * 2 - 1  # target + dirty ancilla
+    controls = list(range(num_controls))
+    target = num_controls * 2 - 2;
+    dirty_ancilla = num_controls - 2;
+    
+
+    #qc = QuantumCircuit(total_qubits)
+
+
+    
+    
+    qc=k_MCT_with_H_gate(k);
  
-    # 初始化 |x⟩ = |1111⟩, a = |1⟩, b = |1⟩, y = |1⟩
-    for i in controls + [ancilla_a, ancilla_b]:
-        qc.x(i)
- 
-    construction_1_mct(qc, controls, target, ancilla_a, ancilla_b)
     output_state = Statevector.from_instruction(qc)
     # Get the unitary matrix for the custom MCT circuit
     custom_unitary = Operator(qc).data
@@ -83,12 +101,9 @@ def main():
     print("Output Circuit:")
     print(qc)
     
-    qc_reference = QuantumCircuit(7)
-    for i in controls:
-        qc_reference.x(i)
-    qc_reference.x(4)
-    qc_reference.x(5)
-    qc_reference.append(MCXGate(4), controls + [target])
+    qc_reference = QuantumCircuit(total_qubits)
+    
+    qc_reference.append(MCXGate(k), controls + [target])
     ref_state = Statevector.from_instruction(qc_reference)
     # Get the unitary matrix for the reference MCT circuit
     reference_unitary = Operator(qc_reference).data
@@ -111,14 +126,19 @@ def main():
     # Compare the normalized unitaries
     unitary_fidelity = np.abs(np.trace(custom_unitary_normalized.conj().T @ reference_unitary_normalized)) / custom_unitary.shape[0]
     
-    print("\n✅ States match?" , output_state.equiv(ref_state))
-
     mat_diff = custom_unitary - reference_unitary
     tolerance = 1e-10    
+
+
+
+
+
+    print("\n✅ States match?" , output_state.equiv(ref_state))
     if Operator(custom_unitary).equiv(Operator(reference_unitary)):
     	print("✅ Unitaries are equivalent up to global phase")
     else:
     	print("❌ Unitaries are not equivalent (even with global phase)")
+
     
     print("\n✅ Unitaries match?(Allow relative phase)" )
     abs_custom = np.abs(custom_unitary)

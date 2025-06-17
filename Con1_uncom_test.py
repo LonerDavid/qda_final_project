@@ -115,10 +115,13 @@ def main():
 
     mat_diff = custom_unitary - reference_unitary
     tolerance = 1e-10    
-    if Operator(custom_unitary).equiv(Operator(reference_unitary)):
-    	print("✅ Unitaries are equivalent up to global phase")
+    if np.all(mat_diff < tolerance):
+    	print("\n✅ Unitaries match?" , True)
     else:
-    	print("❌ Unitaries are not equivalent (even with global phase)")
+    	print("\n❌ Unitaries match? \nEntries differ in magnitude:")
+    	mismatch_indices = np.argwhere(mat_diff >= tolerance)
+    	for i, j in mismatch_indices:
+        	print(f"Mismatch at ({i},{j}): |custom|={cuscustom_unitary[i,j]:.4g}, |reference|={reference_unitary[i,j]:.4g}")
     
     print("\n✅ Unitaries match?(Allow relative phase)" )
     abs_custom = np.abs(custom_unitary)
@@ -127,15 +130,14 @@ def main():
     tolerance = 1e-10
     if np.all(abs_diff < tolerance):
     	print("True")
-    	phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls=4)
-    	for bits, phase in phase_table.items():
-    		print(f"{bits}: phase = {phase:.4f} rad")
     else:
     	print("\n❌ Entries differ in magnitude:")
     	mismatch_indices = np.argwhere(abs_diff >= tolerance)
     	for i, j in mismatch_indices:
         	print(f"Mismatch at ({i},{j}): |custom|={abs_custom[i,j]:.4g}, |reference|={abs_reference[i,j]:.4g}")
-
+    	phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls=4)
+    	for bits, phase in phase_table.items():
+    		print(f"{bits}: phase = {phase:.4f} rad")
 
  
 if __name__ == "__main__":
