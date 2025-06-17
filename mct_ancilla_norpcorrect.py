@@ -8,7 +8,7 @@ import numpy as np
 
 def apply_mct_with_dirty_ancilla(circuit, controls, target, dirty_ancilla):
     """
-    Implements Λ_k(X) using a single dirty ancilla.
+    實作 Construction 5: Implements Λ_k(X) using a single dirty ancilla.
     Args:
         circuit: QuantumCircuit to which the gates are added.
         controls: List of control qubits (k ≥ 2).
@@ -113,7 +113,7 @@ def main():
     # print(ref_state)
 
     # Print circuits
-    print("Input Circuit:")
+    print("Reference Circuit:")
     print(qc_reference)
     print("Output Circuit:")
     print(qc_test)
