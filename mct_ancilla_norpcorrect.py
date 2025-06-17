@@ -73,7 +73,7 @@ def generate_phase_table(custom_unitary, reference_unitary, num_controls, tol=1e
     
 def main():
     # Configuration
-    num_controls = 5
+    num_controls = 4
     total_qubits = num_controls + 2  # target + dirty ancilla
     controls = list(range(num_controls))
     target = num_controls + 1
@@ -84,15 +84,10 @@ def main():
     for i in controls:
         qc_test.x(i)  # Set controls to |1⟩
     qc_test.x(dirty_ancilla)  # Set dirty ancilla to |1⟩ (arbitrary non-|0⟩ state)
-    # Save original state
-    input_state = Statevector.from_instruction(qc_test)
-    # Apply custom MCT (Λₖ(X)) using your decomposition
-    apply_mct_with_dirty_ancilla(qc_test, controls, target, dirty_ancilla)
-    # Simulate final state
-    output_state = Statevector.from_instruction(qc_test)
-    # Get the unitary matrix for the custom MCT circuit
-    custom_unitary = Operator(qc_test).data
-
+    input_state = Statevector.from_instruction(qc_test)     # Save original state
+    apply_mct_with_dirty_ancilla(qc_test, controls, target, dirty_ancilla)     # Apply custom MCT (Λₖ(X)) using your decomposition
+    output_state = Statevector.from_instruction(qc_test)     # Simulate final state
+    custom_unitary = Operator(qc_test).data # Get the unitary matrix for the custom MCT circuit
 
     # Compare against built-in MCT for verification
     qc_reference = QuantumCircuit(total_qubits)
@@ -101,9 +96,9 @@ def main():
     qc_reference.x(dirty_ancilla)
     qc_reference.append(MCXGate(num_controls), controls + [target])
     ref_state = Statevector.from_instruction(qc_reference)
-    # Get the unitary matrix for the reference MCT circuit
-    reference_unitary = Operator(qc_reference).data
-
+    reference_unitary = Operator(qc_reference).data # Get the unitary matrix for the reference MCT circuit
+    
+    ### TEST ONLY ###
     # Print state results
     # print("Input state:")
     # print(input_state)
@@ -111,6 +106,7 @@ def main():
     # print(output_state)
     # print("\nBuilt-in MCT reference output:")
     # print(ref_state)
+    ### END ###
 
     # Print circuits
     print("Reference Circuit:")
@@ -144,7 +140,6 @@ def main():
     unitary_fidelity = np.abs(np.trace(custom_unitary_normalized.conj().T @ reference_unitary_normalized)) / custom_unitary.shape[0]
     print("\n✅ States match?" , output_state.equiv(ref_state))
     print("\n✅ Unitaries match?" , abs(unitary_fidelity - 1.0) < 1e-10)
-    
     print("\n✅ Unitaries match?(Allow relative phase)" )
     abs_custom = np.abs(custom_unitary)
     abs_reference = np.abs(reference_unitary)
