@@ -1,6 +1,6 @@
 # QDA Final Project of Team 12
 ## Topic: Circuit Optimization that allows
- Authors: Cheng-Yeh Yang, Kang-Chieh Fang
+ Authors: Cheng-Yeh Yang, Kang-Chieh Fang /n
  Advisor: Prof. Chung-Yang (Ric) Huang
 ## Structure of this repository:
   1. Con1_traditional.py: Construction 1: 4-control Toffoli Gate Using Two Dirty Ancilla (Lemma 7.2 from Barenco et al.)。
