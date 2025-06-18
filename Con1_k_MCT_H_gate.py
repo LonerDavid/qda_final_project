@@ -51,7 +51,7 @@ def k_MCT_with_H_gate(k: int)-> QuantumCircuit:
  
     return qc
 
-def generate_phase_table(custom_unitary, reference_unitary, num_controls=4, tol=1e-8):
+def generate_phase_table(custom_unitary, reference_unitary, num_controls, tol=1e-8):
     phase_table = {}
     num_qubits = int(np.log2(custom_unitary.shape[0]))
     
@@ -147,7 +147,7 @@ def main():
     tolerance = 1e-10
     if np.all(abs_diff < tolerance):
     	print("True")
-    	phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls=4)
+    	phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls=k)
     	for bits, phase in phase_table.items():
     		print(f"{bits}: phase = {phase:.4f} rad")
     else:
