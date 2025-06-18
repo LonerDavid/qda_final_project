@@ -8,7 +8,7 @@ import numpy as np
  
 def construction_1_mct(circuit, controls, target, ancilla_a, ancilla_b):
     """
-    實作 Construction 1：4-control Toffoli gate 使用 2 個 dirty ancilla。
+    實作 Construction 1：4-control Toffoli gate 使用 2 個 dirty ancilla (with relative phase)。
     controls: x1, x2, x3, x4
     ancilla_a: a
     ancilla_b: b
@@ -74,13 +74,6 @@ def main():
     output_state = Statevector.from_instruction(qc)
     # Get the unitary matrix for the custom MCT circuit
     custom_unitary = Operator(qc).data
-
-
-    
-    # Print circuits
-
-    print("Output Circuit:")
-    print(qc)
     
     qc_reference = QuantumCircuit(7)
     for i in controls:
@@ -94,18 +87,18 @@ def main():
     print("Reference Circuit:")
     print(qc_reference)
     
+    # Print output circuits
+    print("Output Circuit:")
+    print(qc)
+
     ref_state = Statevector.from_instruction(qc_reference)
     # Get the unitary matrix for the reference MCT circuit
     reference_unitary = Operator(qc_reference).data
-    
-    
     
     # Check if the unitaries are equivalent (up to a global phase)
     # Normalize the unitaries to remove global phase differences
     custom_unitary_normalized = custom_unitary / np.linalg.norm(custom_unitary)
     reference_unitary_normalized = reference_unitary / np.linalg.norm(reference_unitary)
-
-
 
     # Compare the normalized unitaries
     unitary_fidelity = np.abs(np.trace(custom_unitary_normalized.conj().T @ reference_unitary_normalized)) / custom_unitary.shape[0]
@@ -116,6 +109,8 @@ def main():
     else:
     	print("❌ Unitaries are not equivalent (even with global phase)")
     
+
+
     print("\n✅ Unitaries match?(Allow relative phase)" )
     abs_custom = np.abs(custom_unitary)
     abs_reference = np.abs(reference_unitary)

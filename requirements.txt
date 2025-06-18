@@ -1,0 +1,4 @@
+# requirements.txt for QDA Final Project
+qiskit==2.0.2
+qiskit-aer==0.15.1
+numpy>=1.21

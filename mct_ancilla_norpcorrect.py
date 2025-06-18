@@ -8,7 +8,7 @@ import numpy as np
 
 def apply_mct_with_dirty_ancilla(circuit, controls, target, dirty_ancilla):
     """
-    Implements Λ_k(X) using a single dirty ancilla.
+    實作 Construction 5: Implements Λ_k(X) using a single dirty ancilla.
     Args:
         circuit: QuantumCircuit to which the gates are added.
         controls: List of control qubits (k ≥ 2).
@@ -47,10 +47,33 @@ def apply_recursive_mct_with_dirty(circuit, controls, target, dirty_ancilla):
         # recurse: treat target as dirty ancilla, use dirty_ancilla to compute intermediate
         apply_mct_with_dirty_ancilla(circuit, controls, target, dirty_ancilla)
 
-
+def generate_phase_table(custom_unitary, reference_unitary, num_controls, tol=1e-8):
+    phase_table = {}
+    num_qubits = int(np.log2(custom_unitary.shape[0]))
+    
+    
+    for i in range(custom_unitary.shape[0]):
+        for j in range(custom_unitary.shape[1]):
+            u_elem = custom_unitary[i, j]
+            r_elem = reference_unitary[i, j]
+ 
+            # 如果兩個都近似 0，就忽略
+            if np.abs(u_elem) < tol and np.abs(r_elem) < tol:
+                continue
+            # 如果 reference 為 0，但 custom 不為 0，就跳過（無法計 phase 差）
+            if np.abs(r_elem) < tol:
+                continue
+ 
+            phase = np.angle(u_elem / r_elem)
+            key = (format(i, f'0{num_qubits}b'), format(j, f'0{num_qubits}b'))
+            phase_table[key] = phase
+ 
+    return phase_table
+    
+    
 def main():
     # Configuration
-    num_controls = 7
+    num_controls = 4
     total_qubits = num_controls + 2  # target + dirty ancilla
     controls = list(range(num_controls))
     target = num_controls + 1
@@ -61,15 +84,10 @@ def main():
     for i in controls:
         qc_test.x(i)  # Set controls to |1⟩
     qc_test.x(dirty_ancilla)  # Set dirty ancilla to |1⟩ (arbitrary non-|0⟩ state)
-    # Save original state
-    input_state = Statevector.from_instruction(qc_test)
-    # Apply custom MCT (Λₖ(X)) using your decomposition
-    apply_mct_with_dirty_ancilla(qc_test, controls, target, dirty_ancilla)
-    # Simulate final state
-    output_state = Statevector.from_instruction(qc_test)
-    # Get the unitary matrix for the custom MCT circuit
-    custom_unitary = Operator(qc_test).data
-
+    input_state = Statevector.from_instruction(qc_test)     # Save original state
+    apply_mct_with_dirty_ancilla(qc_test, controls, target, dirty_ancilla)     # Apply custom MCT (Λₖ(X)) using your decomposition
+    output_state = Statevector.from_instruction(qc_test)     # Simulate final state
+    custom_unitary = Operator(qc_test).data # Get the unitary matrix for the custom MCT circuit
 
     # Compare against built-in MCT for verification
     qc_reference = QuantumCircuit(total_qubits)
@@ -78,9 +96,9 @@ def main():
     qc_reference.x(dirty_ancilla)
     qc_reference.append(MCXGate(num_controls), controls + [target])
     ref_state = Statevector.from_instruction(qc_reference)
-    # Get the unitary matrix for the reference MCT circuit
-    reference_unitary = Operator(qc_reference).data
-
+    reference_unitary = Operator(qc_reference).data # Get the unitary matrix for the reference MCT circuit
+    
+    ### TEST ONLY ###
     # Print state results
     # print("Input state:")
     # print(input_state)
@@ -88,9 +106,10 @@ def main():
     # print(output_state)
     # print("\nBuilt-in MCT reference output:")
     # print(ref_state)
+    ### END ###
 
     # Print circuits
-    print("Input Circuit:")
+    print("Reference Circuit:")
     print(qc_reference)
     print("Output Circuit:")
     print(qc_test)
@@ -121,7 +140,6 @@ def main():
     unitary_fidelity = np.abs(np.trace(custom_unitary_normalized.conj().T @ reference_unitary_normalized)) / custom_unitary.shape[0]
     print("\n✅ States match?" , output_state.equiv(ref_state))
     print("\n✅ Unitaries match?" , abs(unitary_fidelity - 1.0) < 1e-10)
-    
     print("\n✅ Unitaries match?(Allow relative phase)" )
     abs_custom = np.abs(custom_unitary)
     abs_reference = np.abs(reference_unitary)
@@ -129,11 +147,16 @@ def main():
     tolerance = 1e-10
     if np.all(abs_diff < tolerance):
     	print("True")
+    	phase_table = generate_phase_table(custom_unitary, reference_unitary, num_controls)
+    	for bits, phase in phase_table.items():
+    		print(f"{bits}: phase = {phase:.4f} rad")
     else:
     	print("\n❌ Entries differ in magnitude:")
     	mismatch_indices = np.argwhere(abs_diff >= tolerance)
     	for i, j in mismatch_indices:
         	print(f"Mismatch at ({i},{j}): |custom|={abs_custom[i,j]:.4g}, |reference|={abs_reference[i,j]:.4g}")
+
+
 
 if __name__ == "__main__":
     main()
